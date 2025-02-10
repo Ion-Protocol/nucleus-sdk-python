@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "nucleus-sdk-python"
+version = "0.1.0"
+description = "SDK for nucleusearn.io strategy interactions. Use Python to construct manager calls."
+authors = [
+    "Carson Case carson@molecularlabs.io"
+]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.32.3"
+pytest = "^8.3.4"
+eth-utils = "^5.2.0"
+eth-abi = "^5.2.0"
+pycryptodome = "^3.21.0"
+web3 = "^7.8.0"
+python-dotenv = "^1.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
