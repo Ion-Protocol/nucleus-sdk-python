@@ -5,21 +5,23 @@ from web3 import Web3
 from web3 import exceptions
 from nucleus_sdk_python.client import Client
 from nucleus_sdk_python.exceptions import *
+from nucleus_sdk_python.config import DEFAULT_BASE_URL
 import re
 
 load_dotenv()
+nucleus_api_key = os.environ["API_KEY"]
 
 def get_valid_manager_call(client):
     manager_call = client.create_manager_call(root="0x8e93234bde5b9e369fb07acdee1cf6e3033222c2a4a0178fac08a05ce190d6e6", network_string="eth", symbol="tETH")
     return manager_call
 
 def test_client_initialization():
-    client = Client(api_key="test_key")
-    assert client.api_key == "test_key"
-    assert client.base_url == "https://api.nucleusearn.io/merkle/" 
+    client = Client(nucleus_api_key=nucleus_api_key)
+    assert client.nucleus_api_key== nucleus_api_key
+    assert client.base_url == DEFAULT_BASE_URL
 
 def test_manager_call():
-    client = Client(api_key="test_key")
+    client = Client(nucleus_api_key=nucleus_api_key)
     manager_call = get_valid_manager_call(client)
     assert manager_call.root == "0x8e93234bde5b9e369fb07acdee1cf6e3033222c2a4a0178fac08a05ce190d6e6"
     assert manager_call.manager_address == "0xf875dEe4e500ab850369fa9c9F6a8296B912c598"
@@ -32,14 +34,21 @@ def test_execute():
     # TODO: use Tenderly
     w3 = Web3(Web3.HTTPProvider(os.environ["RPC_URL"]))
     acc = w3.eth.account.from_key(os.environ["PRIVATE_KEY"])
-
-    client = Client(api_key="test_key")
+    client = Client(nucleus_api_key=nucleus_api_key)
     manager_call = get_valid_manager_call(client)
     manager_call.add_call("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "approve(address,uint256)", ["0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5", 140], 0)
     receipt = manager_call.execute(w3, acc)
 
+def test_invalid_nucleus_api_key():
+    client = Client(nucleus_api_key="invalid_key")
+    manager_call = get_valid_manager_call(client)
+    manager_call.add_call("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "approve(address,uint256)", ["0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5", 140], 0)
+
+    with pytest.raises(APIError, match="Forbidden"):
+        manager_call.get_calldata()
+
 def test_invalid_inputs():
-    client = Client(api_key="test_key")
+    client = Client(nucleus_api_key=nucleus_api_key)
     with pytest.raises(InvalidInputsError):
         manager_call = client.create_manager_call(root="0x8e93234bde5b9e369fb07acdee1cf6e3033222c2a4a0178fac08a05ce190d6e6", network_string="not_a_network", symbol="tETH")
         manager_call.get_calldata()
@@ -51,21 +60,21 @@ def test_invalid_inputs():
         manager_call.get_calldata()
 
 def test_invalid_target():
-    client = Client(api_key="test_key")
+    client = Client(nucleus_api_key=nucleus_api_key)
     manager_call = get_valid_manager_call(client)
     with pytest.raises(APIError, match="Target 0xd02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 is not defined on this merkle root"):
         manager_call.add_call("0xd02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "approve(address,uint256)", ["0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5", 140], 0)
         manager_call.get_calldata()
 
 def test_invalid_function_signature():
-    client = Client(api_key="test_key")
+    client = Client(nucleus_api_key=nucleus_api_key)
     manager_call = get_valid_manager_call(client)
     with pytest.raises(APIError, match="Function selector: 0xbd0d639f does not exist for this target: 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2,\n        Selectors defined for this target are: 0x095ea7b3"):
         manager_call.add_call("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "foo(address,uint256)", ["0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5", 140], 0)
         manager_call.get_calldata()
 
 def test_invalid_args():
-    client = Client(api_key="test_key")
+    client = Client(nucleus_api_key=nucleus_api_key)
     manager_call = get_valid_manager_call(client)
     with pytest.raises(APIError, match=re.escape("""Could not return proof; call parameters are incorrect
 
@@ -76,7 +85,7 @@ def test_invalid_args():
         manager_call.get_calldata()
 
 def test_invalid_value():
-    client = Client(api_key="test_key")
+    client = Client(nucleus_api_key=nucleus_api_key)
     manager_call = get_valid_manager_call(client)
     with pytest.raises(APIError, match="value mismatch, please verify that this function call can send value"):
         manager_call.add_call("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "approve(address,uint256)", ["0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5", 140], 1)

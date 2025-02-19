@@ -51,49 +51,45 @@ class ManagerCall:
 
     def get_calldata(self) -> List[Dict[str, Any]]:
         """
-        Get the formatted calldata.
+        Get the formatted calldata using batched proofs and decoders.
         
         Returns:
-            List of calls with their method and params
+            The encoded calldata (with batched proofs, decoders, targets, data, and values)
         """
-        proofs = []
-        decoders = []
+        # Build an array of leaves for every call
+        leaves = []
+        for call in self.calls:
+            # Recalculate calldata as a hex string (consistent with _get_proof_and_decoder)
+            encoded_calldata = encode_with_signature(call["function_signature"], call["args"])
+            encoded_calldata_hex = "0x" + encoded_calldata.hex()
+            leaf = {
+                "target": call["target_address"],
+                "calldata": encoded_calldata_hex,
+                "value": call["value"],
+                "chain": self.chain_id
+            }
+            leaves.append(leaf)
+        
+        # Get batch proofs and decoders from the nucleus API
+        batch_results = self._get_batch_proofs_and_decoders(leaves)
+        
         targets = []
         data = []
         values = []
 
-        for call in self.calls:
-            # Get proof data if not already present
-            if call["proof_data"]:
-                proof = call["proof_data"]
-            else:
-                proof = self._get_proof_and_decoder(
-                    call["target_address"], 
-                    call["function_signature"],
-                    call["args"],
-                    call["value"]
-                )["proof"]
-            proofs.append(proof)
+        # Convert hex string proofs to bytes
+        batch_results["proofs"] = [
+            [bytes.fromhex(proof[2:]) for proof in proof_set]
+            for proof_set in batch_results["proofs"]
+        ]
 
-            # Get decoder if not already present 
-            if call["decoder_and_sanitizer"]:
-                decoder = call["decoder_and_sanitizer"]
-            else:
-                decoder = self._get_proof_and_decoder(
-                    call["target_address"],
-                    call["function_signature"], 
-                    call["args"],
-                    call["value"]
-                )["decoderAndSanitizerAddress"]
-            decoders.append(decoder)
-
-            # Add other call data
+        for idx, call in enumerate(self.calls):
             targets.append(call["target_address"])
             data.append(call["data"])
             values.append(call["value"])
-
-        args = [proofs, decoders, targets, data, values]
         
+        args = [batch_results["proofs"], batch_results["decoderAndSanitizerAddress"], targets, data, values]
+        print("args", args)
         return encode_with_signature("manageVaultWithMerkleVerification(bytes32[][],address[],address[],bytes[],uint256[])", args)
 
     def execute(self, w3, acc) -> Any:
@@ -114,6 +110,27 @@ class ManagerCall:
             "value": 0
         }
         return w3.eth.send_transaction(tx)
+
+    def _get_batch_proofs_and_decoders(self, leaves: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
+        """
+        Gets multiple proofs and decoders from the nucleus API by posting an array of leaves.
+        
+        Args:
+            leaves: Array of leaf dictionaries. Each leaf should include:
+                    - "target": The target contract address
+                    - "calldata": The encoded calldata (as a hex string, starting with "0x")
+                    - "value": The value to send with the call
+                    - "chain": The chain ID (this could be added automatically via self.chain_id if desired)
+                    
+        Returns:
+           A dictionary with a list for proofs and decoderAndSanitizerAddresses
+        """
+        # Post the array of leaves to the batch endpoint.
+        response = self.client.post("multiproofs/" + self.root, data={"chain": self.chain_id, "calls": leaves})
+
+        assert len(response["proofs"]) == len(response["decoderAndSanitizerAddress"])
+
+        return response
 
     def _get_proof_and_decoder(self, target, signature, args, value):
         """

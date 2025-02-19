@@ -48,13 +48,10 @@ def encode_with_signature(signature: str, args: list):
     """
     # Compute the function selector
     function_selector = keccak(text=signature)[:4]
-
     # Parse argument types
     arg_types = parse_argument_types(signature)
-
     # ABI-encode the arguments
     encoded_args = encode(arg_types, args)
-    
     # Combine the function selector and encoded arguments
     return function_selector + encoded_args
 

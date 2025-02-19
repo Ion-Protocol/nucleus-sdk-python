@@ -3,10 +3,11 @@ import requests
 from typing import Optional, Dict, Any
 from .exceptions import APIError
 from .manager_call import ManagerCall
-from .config import address_book_endpoint
+from .config import address_book_endpoint, DEFAULT_BASE_URL
 from .utils import checksum_addresses_in_json
+from importlib.metadata import version
 class Client:
-    def __init__(self, api_key: str, base_url: str = "https://api.nucleusearn.io/merkle/"):
+    def __init__(self, nucleus_api_key: str, base_url: str = DEFAULT_BASE_URL):
         """
         Initialize the SDK client.
         
@@ -14,7 +15,7 @@ class Client:
             api_key: Your API key
             base_url: Base URL for the API (defaults to production)
         """
-        self.api_key = api_key
+        self.nucleus_api_key = nucleus_api_key
 
 
         self.base_url = base_url
@@ -26,10 +27,15 @@ class Client:
 
     def _setup_session(self):
         """Configure the HTTP session with default headers."""
+        try:
+            sdk_version = version("nucleus_sdk_python")
+        except:
+            sdk_version = "unknown"
+            
         self.session.headers.update({
-            "Authorization": f"Bearer {self.api_key}",
+            "x-api-key": f"{self.nucleus_api_key}",
             "Content-Type": "application/json",
-            "User-Agent": "YourCompanySDK/1.0.0"
+            "User-Agent": f"NucleusManagerSDKPython/{sdk_version}"
         })
 
     def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
@@ -48,13 +54,14 @@ class Client:
             APIError: If the request fails
         """
         url = f"{self.base_url}{endpoint}"
+        
         try:
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as e:
-            message = json.loads(e.response.text)['message']
-            if(message != "" and message != None):
+            message = json.loads(e.response.text).get("message")
+            if message:
                 raise APIError(message, status_code=e.response.status_code)
             else:
                 raise APIError(str(e), status_code=e.response.status_code)
