@@ -6,14 +6,16 @@ import json
 if TYPE_CHECKING:
     from nucleus_sdk_python.client import Client
 
-class ManagerCall:
+class CalldataQueue:
     def __init__(self, network_string: str, symbol: str, root: str, client: 'Client'):
         """
-        Initialize a ManagerCall instance.
+        Initialize a CalldataQueue instance.
         
         Args:
             client: The SDK client for executing calls
         """
+        network_string = network_string.lower()
+        
         self.client = client
         try:
             self.manager_address = client.address_book[network_string]["nucleus"][symbol]["manager"]
@@ -26,6 +28,7 @@ class ManagerCall:
             raise InvalidInputsError(f"Could not find chain id for network '{network_string}'. Please check the network is valid.")
         
         self.root = root
+        
         self.calls: List[Dict[str, Any]] = []
 
     def add_call(self, target_address: str, function_signature: str, args: List[any], value: int) -> None:
@@ -127,7 +130,7 @@ class ManagerCall:
         """
         # Post the array of leaves to the batch endpoint.
         response = self.client.post("multiproofs/" + self.root, data={"chain": self.chain_id, "calls": leaves})
-
+        print("response", response)
         assert len(response["proofs"]) == len(response["decoderAndSanitizerAddress"])
 
         return response

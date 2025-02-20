@@ -2,7 +2,7 @@ import json
 import requests
 from typing import Optional, Dict, Any
 from .exceptions import APIError
-from .manager_call import ManagerCall
+from .calldata_queue import CalldataQueue
 from .config import address_book_endpoint, DEFAULT_BASE_URL
 from .utils import checksum_addresses_in_json
 from importlib.metadata import version
@@ -66,8 +66,8 @@ class Client:
             else:
                 raise APIError(str(e), status_code=e.response.status_code)
 
-    def create_manager_call(self, network_string: str, symbol: str, root: str) -> ManagerCall:
-        return ManagerCall(network_string, symbol, root, self)
+    def create_calldata_queue(self, network_string: str, symbol: str, root: str) -> CalldataQueue:
+        return CalldataQueue(network_string, symbol, root, self)
     
     def get(self, endpoint: str, params: Optional[Dict] = None) -> Dict[str, Any]:
         """Make a GET request."""
