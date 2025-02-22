@@ -66,8 +66,8 @@ class Client:
             else:
                 raise APIError(str(e), status_code=e.response.status_code)
 
-    def create_calldata_queue(self, network_string: str, symbol: str, root: str) -> CalldataQueue:
-        return CalldataQueue(network_string, symbol, root, self)
+    def create_calldata_queue(self, chain_id: int, strategist_address: str, rpc_url: str, symbol: str) -> CalldataQueue:
+        return CalldataQueue(chain_id, strategist_address, rpc_url, symbol, self)
     
     def get(self, endpoint: str, params: Optional[Dict] = None) -> Dict[str, Any]:
         """Make a GET request."""
