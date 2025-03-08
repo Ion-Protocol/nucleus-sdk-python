@@ -65,8 +65,7 @@ class ManagerCall:
             leaf = {
                 "target": call["target_address"],
                 "calldata": encoded_calldata_hex,
-                "value": call["value"],
-                "chain": self.chain_id
+                "value": call["value"]
             }
             leaves.append(leaf)
         
@@ -101,15 +100,28 @@ class ManagerCall:
         """
         if not self.calls:
             raise ValueError("No calls to execute")
-
+            
         calldata = self.get_calldata()
-        tx = {
-            "to": self.manager_address,
-            "from": acc.address,
-            "data": calldata,
-            "value": 0
+
+        transaction = {
+            'from': acc.address,
+            'to': self.manager_address,
+            'value': 0,
+            'nonce': w3.eth.get_transaction_count(acc.address),
+            'data': calldata,
+            'gas': w3.eth.estimate_gas({
+                'from': acc.address,
+                'to': self.manager_address,
+                'data': calldata
+            }),
+            'gasPrice': w3.eth.gas_price,
+            'chainId': self.chain_id
         }
-        return w3.eth.send_transaction(tx)
+
+        signed_txn = acc.sign_transaction(transaction)
+        receipt = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
+
+        return receipt
 
     def _get_batch_proofs_and_decoders(self, leaves: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
         """

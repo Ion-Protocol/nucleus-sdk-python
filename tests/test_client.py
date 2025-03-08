@@ -76,11 +76,7 @@ def test_invalid_function_signature():
 def test_invalid_args():
     client = Client(nucleus_api_key=nucleus_api_key)
     manager_call = get_valid_manager_call(client)
-    with pytest.raises(APIError, match=re.escape("""Could not return proof; call parameters are incorrect
-
-      More information about argument parameters can be found at /configs/0x8e93234bde5b9e369fb07acdee1cf6e3033222c2a4a0178fac08a05ce190d6e6
-      The allowed arguments for this target and function are: 
- [["0xBA12222222228d8Ba445958a75a0704d566BF2C8",0],["0xC8Eb2Cf2f792F77AF0Cd9e203305a585E588179D",0],["0x1b81D678ffb9C0263b24A97847620C99d213eB14",0],["0x39F5b252dE249790fAEd0C2F05aBead56D2088e1",0],["0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5",0]]""")):
+    with pytest.raises(APIError, match=re.escape("""Could not return proof, call parameters are incorrect\n \n          The allowed arguments for this target and function are: \n [["0xBA12222222228d8Ba445958a75a0704d566BF2C8",0],["0xC8Eb2Cf2f792F77AF0Cd9e203305a585E588179D",0],["0x1b81D678ffb9C0263b24A97847620C99d213eB14",0],["0x39F5b252dE249790fAEd0C2F05aBead56D2088e1",0],["0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5",0]]\n\n          The packedArgs for this target and function is: undefined""")):
         manager_call.add_call("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "approve(address,uint256)", ["0x00000fDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5", 140], 0)
         manager_call.get_calldata()
 
