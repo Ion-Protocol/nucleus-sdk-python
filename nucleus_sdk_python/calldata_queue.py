@@ -132,12 +132,20 @@ class CalldataQueue:
 
         calldata = self.get_calldata()
         tx = {
-            "to": self.manager_address,
             "from": acc.address,
+            "to": self.manager_address,
             "data": calldata,
-            "value": 0
+            "value": 0,
+            "nonce": w3.eth.get_transaction_count(acc.address),
+            "gas": w3.eth.estimate_gas({
+                "from": acc.address,
+                "to": self.manager_address,
+                "data": calldata
+            }),
+            "gasPrice": w3.eth.gas_price,
+            "chainId": self.chain_id
         }
-        return w3.eth.send_transaction(tx)
+        return w3.eth.send_raw_transaction(w3.eth.account.sign_transaction(tx, acc.key)['raw_transaction'])
 
     def _get_batch_proofs_and_decoders(self, leaves: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
         """
