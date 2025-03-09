@@ -143,7 +143,7 @@ class CalldataQueue:
                 "data": calldata
             }),
             "gasPrice": w3.eth.gas_price,
-            "chainId": self.chain_id
+            "chainId": int(self.chain_id)
         }
         return w3.eth.send_raw_transaction(w3.eth.account.sign_transaction(tx, acc.key)['raw_transaction'])
 
