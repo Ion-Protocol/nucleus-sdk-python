@@ -1,4 +1,4 @@
 from .client import Client
-from .manager_call import ManagerCall
+from .calldata_queue import CalldataQueue
 
-__all__ = ["Client", "ManagerCall"]
+__all__ = ["Client", "CalldataQueue"]

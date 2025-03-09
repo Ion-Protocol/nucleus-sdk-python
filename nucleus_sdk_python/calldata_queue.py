@@ -2,30 +2,57 @@ from typing import List, Dict, Any, TYPE_CHECKING
 from .exceptions import *
 from .utils import encode_with_signature
 import json
+from web3 import Web3
 
 if TYPE_CHECKING:
     from nucleus_sdk_python.client import Client
 
-class ManagerCall:
-    def __init__(self, network_string: str, symbol: str, root: str, client: 'Client'):
+class CalldataQueue:
+    def __init__(self, chain_id: int, strategist_address: str, rpc_url: str, symbol: str, client: 'Client'):
         """
-        Initialize a ManagerCall instance.
+        Initialize a CalldataQueue instance.
         
         Args:
             client: The SDK client for executing calls
         """
+        # TODO: Read this from the address book as the ChainID
+        network_string = str(chain_id)
+        
         self.client = client
         try:
             self.manager_address = client.address_book[network_string]["nucleus"][symbol]["manager"]
         except KeyError as e:
             raise InvalidInputsError(f"Could not find manager address for network '{network_string}' and symbol '{symbol}'. Please check the network and symbol are valid.")
-
-        try:
-            self.chain_id = client.address_book[network_string]["id"]
-        except KeyError as e:
-            raise InvalidInputsError(f"Could not find chain id for network '{network_string}'. Please check the network is valid.")
         
-        self.root = root
+        self.chain_id = chain_id
+        self.rpc_url = rpc_url
+        self.strategist_address = strategist_address
+
+        # Get root from manager contract
+        w3 = Web3(Web3.HTTPProvider(rpc_url))
+        try:
+            w3.eth.get_block('latest')
+        except Exception as e:
+            raise InvalidInputsError(f"Could not connect to RPC URL '{rpc_url}'. Please check the RPC URL is valid and accessible.")
+            
+        manager_contract = w3.eth.contract(
+            address=self.manager_address,
+            abi=[{
+                "inputs": [{"type": "address", "name": "strategist"}],
+                "name": "manageRoot",
+                "outputs": [{"type": "bytes32"}],
+                "stateMutability": "view",
+                "type": "function"
+            }]
+        )
+        self.root = manager_contract.functions.manageRoot(strategist_address).call().hex()
+
+        if self.root[0:2] != "0x":
+            self.root = "0x" + self.root
+
+        if self.root == "0x0000000000000000000000000000000000000000000000000000000000000000":
+            raise InvalidInputsError(f"Could not find root for strategist '{strategist_address}'. Please check the strategist address is valid.")
+        
         self.calls: List[Dict[str, Any]] = []
 
     def add_call(self, target_address: str, function_signature: str, args: List[any], value: int) -> None:
@@ -88,7 +115,6 @@ class ManagerCall:
             values.append(call["value"])
         
         args = [batch_results["proofs"], batch_results["decoderAndSanitizerAddress"], targets, data, values]
-        print("args", args)
         return encode_with_signature("manageVaultWithMerkleVerification(bytes32[][],address[],address[],bytes[],uint256[])", args)
 
     def execute(self, w3, acc) -> Any:
@@ -100,28 +126,18 @@ class ManagerCall:
         """
         if not self.calls:
             raise ValueError("No calls to execute")
-            
+        
+        if self.strategist_address != acc.address:
+            raise ValueError("Strategist address does not match the account address")
+
         calldata = self.get_calldata()
-
-        transaction = {
-            'from': acc.address,
-            'to': self.manager_address,
-            'value': 0,
-            'nonce': w3.eth.get_transaction_count(acc.address),
-            'data': calldata,
-            'gas': w3.eth.estimate_gas({
-                'from': acc.address,
-                'to': self.manager_address,
-                'data': calldata
-            }),
-            'gasPrice': w3.eth.gas_price,
-            'chainId': self.chain_id
+        tx = {
+            "to": self.manager_address,
+            "from": acc.address,
+            "data": calldata,
+            "value": 0
         }
-
-        signed_txn = acc.sign_transaction(transaction)
-        receipt = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
-
-        return receipt
+        return w3.eth.send_transaction(tx)
 
     def _get_batch_proofs_and_decoders(self, leaves: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
         """
@@ -139,7 +155,7 @@ class ManagerCall:
         """
         # Post the array of leaves to the batch endpoint.
         response = self.client.post("multiproofs/" + self.root, data={"chain": self.chain_id, "calls": leaves})
-
+        print("response: ", response)
         assert len(response["proofs"]) == len(response["decoderAndSanitizerAddress"])
 
         return response
