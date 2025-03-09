@@ -26,7 +26,7 @@ def test_client_initialization():
 def test_calldata_queue():
     client = Client(nucleus_api_key=nucleus_api_key)
     calldata_queue = get_valid_calldata_queue(client)
-    assert calldata_queue.root == "0x0f7a78ccb608ed14359a6826f03d4aee0fe4aca79e697742107692ae82455dfa"
+    assert calldata_queue.root == "0x8e93234bde5b9e369fb07acdee1cf6e3033222c2a4a0178fac08a05ce190d6e6"
     assert calldata_queue.manager_address == "0xf875dEe4e500ab850369fa9c9F6a8296B912c598"
     assert calldata_queue.client == client
 
@@ -97,7 +97,7 @@ def test_invalid_function_signature():
 def test_invalid_args():
     client = Client(nucleus_api_key=nucleus_api_key)
     calldata_queue = get_valid_calldata_queue(client)
-    expected_error = 'Could not return proof, call parameters are incorrect\n \n          The allowed arguments for this target and function are: \n [["0xBA12222222228d8Ba445958a75a0704d566BF2C8",0],["0xC8Eb2Cf2f792F77AF0Cd9e203305a585E588179D",0],["0x1b81D678ffb9C0263b24A97847620C99d213eB14",0],["0x39F5b252dE249790fAEd0C2F05aBead56D2088e1",0],["0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5",0],["0xD664b74274DfEB538d9baC494F3a4760828B02b0",0]]\n\n          The packedArgs for this target and function is: undefined'
+    expected_error = 'Could not return proof, call parameters are incorrect\n \n          The allowed arguments for this target and function are: \n [["0xBA12222222228d8Ba445958a75a0704d566BF2C8",0],["0xC8Eb2Cf2f792F77AF0Cd9e203305a585E588179D",0],["0x1b81D678ffb9C0263b24A97847620C99d213eB14",0],["0x39F5b252dE249790fAEd0C2F05aBead56D2088e1",0],["0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5",0]]\n\n          The packedArgs for this target and function is: undefined'
 
     with pytest.raises(APIError, match=re.escape(expected_error)):
         # Add call with invalid address that's not in allowed arguments list
