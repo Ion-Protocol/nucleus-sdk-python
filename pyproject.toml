@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "nucleus-sdk-python"
-version = "0.1.0"
+version = "0.1.1"
 description = "SDK for nucleusearn.io strategy interactions. Use Python to construct manager calls."
 authors = [
-    "Carson Case carson@molecularlabs.io"
+    "Carson Case <carson@molecularlabs.io>"
 ]
 license = "MIT"
 readme = "README.md"
